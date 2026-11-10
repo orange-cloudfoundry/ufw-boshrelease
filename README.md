@@ -26,6 +26,10 @@ with `include.jobs`. In the Orange PaaS, add-ons are wired via
   exporter scrape endpoint on its environment port — 9099 in this PaaS, and any
   other inbound management endpoint) is always rendered first; rendering *fails* when
   it is empty — no forgotten add-on property can lock operators out.
+  Source convention: the environment's internal addressing supernet as a single
+  constant (e.g. `192.168.0.0/16`) — monitoring scrapers are k8s-hosted with
+  mutable node IPs, and a constant baseline keeps add-on files reusable across
+  directors without secrets wiring.
   Egress-aware: the BOSH control plane (agent NATS session to the director,
   blobstore pulls, health monitor) is agent-initiated *outbound* traffic, so it
   needs no inbound allow and must not be listed in the baseline.

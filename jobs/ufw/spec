@@ -55,8 +55,13 @@ properties:
       endpoints only — SSH (22) from jumpbox/operators, and the monitoring
       scrape endpoint (node exporter on its environment port, e.g. 9099 when
       a runtime-config addon overrides the 9100 default; add 8844/tcp only
-      if bosh-dns health-server checks reach this VM). Do NOT add BOSH
-      control-plane ports here: in NATS mode the agent dials out to
+      if bosh-dns health-server checks reach this VM). Source recommendation:
+      use the environment's internal addressing supernet as a single constant
+      (e.g. 192.168.0.0/16) rather than enumerating per-service CIDRs — the
+      monitoring scrapers are typically k8s-hosted with mutable node IPs that
+      cannot be listed exhaustively, and a constant baseline keeps add-on
+      definitions reusable across directors without secrets wiring. Do NOT
+      add BOSH control-plane ports here: in NATS mode the agent dials out to
       nats://director:4222 and pulls blobs from the director blobstore, so
       agent/HM/blobstore traffic is egress and needs no inbound rule
       (default-deny incoming leaves egress untouched). No default on
@@ -64,12 +69,12 @@ properties:
       aborts the deploy instead of locking operators out of their VMs.
       Same entry shape as ufw.rules.
     example:
-    - description: ssh from jumpbox
-      from: ["10.0.4.50/32"]
+    - description: ssh from internal network (jumpbox/operators)
+      from: ["192.168.0.0/16"]
       to_ports: [22]
       protocol: tcp
     - description: node exporter scrape from monitoring
-      from: ["10.0.20.0/24"]
+      from: ["192.168.0.0/16"]
       to_ports: [9099]
       protocol: tcp
   ufw.enforce:
