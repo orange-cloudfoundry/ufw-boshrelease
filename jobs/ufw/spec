@@ -52,10 +52,15 @@ properties:
     description: |
       Mandatory operational allow baseline, always applied before ufw.rules
       and impossible to override: source CIDRs for the *inbound* operational
-      endpoints only — SSH (22) from jumpbox/operators, and the monitoring
+      endpoints only — SSH (22) from jumpbox/operators, the monitoring
       scrape endpoint (node exporter on its environment port, e.g. 9099 when
-      a runtime-config addon overrides the 9100 default; add 8844/tcp only
-      if bosh-dns health-server checks reach this VM). Source recommendation:
+      a runtime-config addon overrides the 9100 default), and 8853/tcp when
+      bosh-dns health checks are enabled (peers pull each other's health
+      server; blocking it de-registers the VM from DNS answers. 8853 is the
+      bosh-dns health.server.port default on current releases; much older
+      ones used 8844 — check the pinned version. The bosh-dns resolver
+      itself binds the VM-local link-local 169.254.0.2:53: no inbound rule
+      needed). Source recommendation:
       use the environment's internal addressing supernet as a single constant
       (e.g. 192.168.0.0/16) rather than enumerating per-service CIDRs — the
       monitoring scrapers are typically k8s-hosted with mutable node IPs that
@@ -76,6 +81,10 @@ properties:
     - description: node exporter scrape from monitoring
       from: ["192.168.0.0/16"]
       to_ports: [9099]
+      protocol: tcp
+    - description: bosh-dns health server from peers
+      from: ["192.168.0.0/16"]
+      to_ports: [8853]
       protocol: tcp
   ufw.enforce:
     description: "false: render and report the desired rules without touching the firewall (dry-run). true: activate them."

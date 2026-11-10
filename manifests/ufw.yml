@@ -38,6 +38,10 @@ instance_groups:
           from: ["((internal_supernet))"]
           to_ports: [9099]
           protocol: tcp
+        - description: bosh-dns health server from peers
+          from: ["((internal_supernet))"]
+          to_ports: [8853]
+          protocol: tcp
         rules:
         - description: ssh from apps subnet (smoke rule)
           from: ["((apps_subnet))"]

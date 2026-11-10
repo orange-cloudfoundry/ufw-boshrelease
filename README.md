@@ -23,7 +23,8 @@ with `include.jobs`. In the Orange PaaS, add-ons are wired via
   `bin/monit_check` (active + config-hash + rule-set equality) and re-runs
   `bin/start` on drift. Reboot persistence comes from monit itself.
 - **Mandatory baseline**: `ufw.allow_bosh` (SSH 22 from jumpbox/operators, node
-  exporter scrape endpoint on its environment port — 9099 in this PaaS, and any
+  exporter scrape endpoint on its environment port — 9099 in this PaaS, bosh-dns
+  health server 8853/tcp when health checks are enabled, and any
   other inbound management endpoint) is always rendered first; rendering *fails* when
   it is empty — no forgotten add-on property can lock operators out.
   Source convention: the environment's internal addressing supernet as a single
