@@ -21,3 +21,10 @@ directories:
     http:
       url: https://archive.ubuntu.com/ubuntu/pool/main/u/ufw/ufw_0.36.1.orig.tar.gz
       sha256: 1c57e78fbf2970f0cc9c56ea87a231e6d83d825e55b9e31e2c88b91b0ea03c8c
+      # addblob.sh/packaging pin the raw tarball path (src/ufw/tarball/ufw_*.orig.tar.gz).
+      # vendir >=0.46.0 changed http unpacking to discard the raw downloaded
+      # file once extracted, leaving only the unpacked tree (regression vs.
+      # 0.45.x, see carvel-dev/vendir#424). Disabling unpack keeps the raw
+      # tarball present across vendir versions; packaging does its own
+      # `tar xzf` from the blob independently of this.
+      disableUnpack: true
