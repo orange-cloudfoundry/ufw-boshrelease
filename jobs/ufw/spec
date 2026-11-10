@@ -4,8 +4,11 @@ description: |
   VM-level inbound firewall management using the packaged ufw frontend (own
   package, no dependency on stemcell-shipped ufw). Applies a declarative list
   of inbound allow rules over a default-deny-incoming / default-allow-outgoing
-  posture, plus a mandatory operational allow baseline (BOSH agent, health
-  monitor, node exporter, SSH) that rules cannot remove. Designed to be
+  posture, plus a mandatory operational allow baseline (SSH, monitoring
+  scrape, other inbound management endpoints) that rules cannot remove.
+  Egress-aware by design: in NATS mode the BOSH agent, health monitor and
+  blobstore are agent-initiated outbound connections, so they require no
+  inbound allow. Designed to be
   delivered fleet-wide through runtime-config addons, one addon per exposed
   protocol, scoped with include.jobs.
 
@@ -48,19 +51,26 @@ properties:
   ufw.allow_bosh:
     description: |
       Mandatory operational allow baseline, always applied before ufw.rules
-      and impossible to override: BOSH agent (25555), agent/health-monitor
-      (4222), node exporter (9100,9101) and SSH (22) source CIDRs. No default
-      on purpose: rendering FAILS when empty, so a forgotten addon property
-      aborts the deploy instead of locking the director out of its VMs.
+      and impossible to override: source CIDRs for the *inbound* operational
+      endpoints only — SSH (22) from jumpbox/operators, and the monitoring
+      scrape endpoint (node exporter on its environment port, e.g. 9099 when
+      a runtime-config addon overrides the 9100 default; add 8844/tcp only
+      if bosh-dns health-server checks reach this VM). Do NOT add BOSH
+      control-plane ports here: in NATS mode the agent dials out to
+      nats://director:4222 and pulls blobs from the director blobstore, so
+      agent/HM/blobstore traffic is egress and needs no inbound rule
+      (default-deny incoming leaves egress untouched). No default on
+      purpose: rendering FAILS when empty, so a forgotten addon property
+      aborts the deploy instead of locking operators out of their VMs.
       Same entry shape as ufw.rules.
     example:
-    - description: bosh agent + nats/hm from bosh subnet
-      from: ["10.0.4.0/24"]
-      to_ports: [25555, 4222]
-      protocol: tcp
     - description: ssh from jumpbox
       from: ["10.0.4.50/32"]
       to_ports: [22]
+      protocol: tcp
+    - description: node exporter scrape from monitoring
+      from: ["10.0.20.0/24"]
+      to_ports: [9099]
       protocol: tcp
   ufw.enforce:
     description: "false: render and report the desired rules without touching the firewall (dry-run). true: activate them."

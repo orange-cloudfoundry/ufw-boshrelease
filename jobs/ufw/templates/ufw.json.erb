@@ -60,7 +60,7 @@ raise "ufw.logging must be one of low|medium|high|full|off (got '#{logging}')" u
 
 baseline = p('ufw.allow_bosh')
 if baseline.nil? || baseline.empty?
-  raise "ufw.allow_bosh is required: refusing to render a firewall without the BOSH agent/health-monitor/node-exporter/SSH allow baseline (director lockout risk)"
+  raise "ufw.allow_bosh is required: refusing to render a firewall without the inbound operational allow baseline (SSH/monitoring sources; operator lockout risk). BOSH control plane (NATS agent, HM, blobstore) is agent-initiated egress and needs no inbound allow."
 end
 
 tag = "paas-ufw/#{spec.name}"

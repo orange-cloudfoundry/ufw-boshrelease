@@ -22,9 +22,13 @@ with `include.jobs`. In the Orange PaaS, add-ons are wired via
 - **Not a daemon**: it is a policy applier. Monit uses `check program` on
   `bin/monit_check` (active + config-hash + rule-set equality) and re-runs
   `bin/start` on drift. Reboot persistence comes from monit itself.
-- **Mandatory baseline**: `ufw.allow_bosh` (agent 25555, agent/hm 4222, node
-  exporter 9100/9101, SSH 22) is always rendered first; rendering *fails* when
-  it is empty — no forgotten add-on property can lock the director out.
+- **Mandatory baseline**: `ufw.allow_bosh` (SSH 22 from jumpbox/operators, node
+  exporter scrape endpoint on its environment port — 9099 in this PaaS, and any
+  other inbound management endpoint) is always rendered first; rendering *fails* when
+  it is empty — no forgotten add-on property can lock operators out.
+  Egress-aware: the BOSH control plane (agent NATS session to the director,
+  blobstore pulls, health monitor) is agent-initiated *outbound* traffic, so it
+  needs no inbound allow and must not be listed in the baseline.
 - **Ownership by comment tag**: the job only ever touches rules commented
   `paas-ufw/<instance group>`; `ufw show added` round-trip string diff keeps
   apply idempotent (add missing → enable → prune stale; no traffic window).

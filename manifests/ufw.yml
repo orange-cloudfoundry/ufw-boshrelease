@@ -2,7 +2,7 @@
 # Scratch manifest to smoke-test the release standalone (no runtime-config add-on).
 # Usage (see README for the dev-release flow):
 #   bosh deploy manifests/ufw.yml \
-#     -v bosh_subnet=10.0.4.0/24 -v jumpbox=10.0.4.50/32 -v apps_subnet=10.20.30.0/24
+#     -v monitoring_subnet=10.0.20.0/24 -v jumpbox=10.0.4.50/32 -v apps_subnet=10.20.30.0/24
 name: ufw-test
 releases:
 - name: ufw
@@ -30,17 +30,13 @@ instance_groups:
       ufw:
         enforce: false
         allow_bosh:
-        - description: bosh agent and nats/hm from bosh subnet
-          from: ["((bosh_subnet))"]
-          to_ports: [25555, 4222]
-          protocol: tcp
-        - description: node exporter from monitoring
-          from: ["((bosh_subnet))"]
-          to_ports: [9100, 9101]
-          protocol: tcp
         - description: ssh from jumpbox
           from: ["((jumpbox))"]
           to_ports: [22]
+          protocol: tcp
+        - description: node exporter scrape from monitoring (environment port)
+          from: ["((monitoring_subnet))"]
+          to_ports: [9099]
           protocol: tcp
         rules:
         - description: ssh from apps subnet (smoke rule)
