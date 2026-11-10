@@ -5,15 +5,19 @@ minimumRequiredVersion: 0.34.0
 directories:
 # doc: https://carvel.dev/vendir/docs/v0.40.x/vendir-spec/
 # Upstream: ufw lives on Launchpad (no GitHub repo, no tagged tarball hosting).
-# We vendor the Debian orig tarball from the Ubuntu source archive: it is the
-# pristine upstream release, content-addressed by Launchpad's source archive,
-# and matches the version shipped by the ubuntu-jammy stemcell generation.
-# Bump manually (once per stemcell OS generation): pick the new series page
-# https://launchpad.net/ubuntu/<series>/+source/ufw , take the *.orig.tar.gz
-# link, update url + sha256 below.
+# We vendor the Debian orig tarball from the Ubuntu archive pool: the orig
+# tarball is the pristine upstream release (byte-identical to the copy hosted
+# by Launchpad's source archive) and matches the version shipped by the
+# ubuntu-jammy stemcell generation. The pool is served from Ubuntu's CDN and
+# is far more reliable than Launchpad's own file host (launchpadlibrarian.net,
+# target of the +sourcefiles 303 redirect), which intermittently 500s/timeouts.
+# Bump manually (once per stemcell OS generation): find the new version at
+# https://launchpad.net/ubuntu/<series>/+source/ufw , then point url at
+# https://archive.ubuntu.com/ubuntu/pool/main/u/ufw/ufw_<version>.orig.tar.gz
+# and update sha256 below (verify against the version page's checksum).
 - path: src/ufw
   contents:
   - path: tarball
     http:
-      url: https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/ufw/0.36.1-4ubuntu0.1/ufw_0.36.1.orig.tar.gz
+      url: https://archive.ubuntu.com/ubuntu/pool/main/u/ufw/ufw_0.36.1.orig.tar.gz
       sha256: 1c57e78fbf2970f0cc9c56ea87a231e6d83d825e55b9e31e2c88b91b0ea03c8c
