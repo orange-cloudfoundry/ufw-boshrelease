@@ -13,9 +13,13 @@ NEW_BLOBS_WERE_ADDED="false"
 function addBlobOnChecksumChange() {
   src="$1"
   target="$2"
+  if [ ! -f "$src" ]; then
+    echo "ERROR: $src not found — run ./vendor.sh before ./addblob.sh" >&2
+    exit 1
+  fi
   blob_checksum=$(cat config/blobs.yml | yq .'"'${target}'"'.sha)
   blob_object_id=$(cat config/blobs.yml | yq .'"'${target}'"'.object_id) # With dev release, blobs are not published yet, so we need to add it again
-  src_checksum=$(cat "${src}" | sha256sum | cut -d " " -f1)
+  src_checksum=$(sha256sum "${src}" | cut -d " " -f1)
   if [ "${blob_checksum}" != "sha256:${src_checksum}" ] || [ "$blob_object_id" = "null" ]; then
     bosh add-blob "${src}" "${target}"
     NEW_BLOBS_WERE_ADDED="true"

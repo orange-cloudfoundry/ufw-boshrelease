@@ -18,3 +18,4 @@ blobs/*
 tmp
 renovate.log
 src/github.com/*
+src/

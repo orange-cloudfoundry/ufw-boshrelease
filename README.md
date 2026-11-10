@@ -111,6 +111,12 @@ bosh create-release --name ufw --version 0.0.0-dev+local \
   --tarball ./ufw-dev.tgz --force
 ```
 
+`vendor.sh` + `addblob.sh` are only needed on a fresh clone or after an
+upstream bump: if `bosh blobs` already lists `ufw/ufw.orig.tar.gz` as
+`(local)`, go straight to `bosh create-release`. `vendor.sh` fetches from the
+Ubuntu archive CDN (Launchpad's own file host is flaky); on proxied runners
+verify `curl -sI https://archive.ubuntu.com/ubuntu/pool/main/u/ufw/` first.
+
 ## Blobstore bootstrap (TODO)
 
 Final releases require the s3-compat GCS bucket `orange-ufw-boshrelease` and
