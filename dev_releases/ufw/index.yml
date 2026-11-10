@@ -1,8 +1,0 @@
-builds:
-  62742587-7372-4510-7e1f-ab225af07da0:
-    version: 0.0.0-dev+1794315500
-  a7d9e7e2-999b-49d5-56e1-857acca2c210:
-    version: 0.0.0-dev+local
-  c56238fc-d9c1-4261-7dfb-b944a4f90166:
-    version: 0.0.0-dev+1794313700
-format-version: "2"
