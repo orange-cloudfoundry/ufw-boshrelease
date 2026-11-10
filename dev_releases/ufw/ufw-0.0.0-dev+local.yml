@@ -1,0 +1,22 @@
+name: ufw
+version: 0.0.0-dev+local
+commit_hash: empty
+uncommitted_changes: true
+jobs:
+- name: ufw
+  version: d046ee13f483622491a5e6f02ddde0ceac0511a82c42eacfb406399d9b13e7e9
+  fingerprint: d046ee13f483622491a5e6f02ddde0ceac0511a82c42eacfb406399d9b13e7e9
+  sha1: sha256:a609ccfc5b907d69d11d76264b0d4f88bfe5529359be14c190f1ec7c4c61f97d
+  packages:
+  - ufw
+packages:
+- name: ufw
+  version: 35b3c31ca5af4e45fa4abc7f2851deeb9ac5e02243d5f8c7b9e2ebb98552e373
+  fingerprint: 35b3c31ca5af4e45fa4abc7f2851deeb9ac5e02243d5f8c7b9e2ebb98552e373
+  sha1: sha256:1dbe436d91386d53c15cd84ce2db11da427897fcc61b73583b71ffc9a0e1dedd
+  dependencies: []
+license:
+  version: 8d9294c36f4d7caba6a36595ba15ec3aa9f775dc111745c46ef80bdef9baaaf2
+  fingerprint: 8d9294c36f4d7caba6a36595ba15ec3aa9f775dc111745c46ef80bdef9baaaf2
+  sha1: sha256:ef3076c34ab8e5d837084557269e40aa8e075cf744d57fa110f8a5f2c6a16d68
+no_compression: false

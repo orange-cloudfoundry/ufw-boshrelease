@@ -1,0 +1,12 @@
+{
+  "__spec_name": "firewall-test",
+  "ufw.logging": "low",
+  "ufw.enforce": false,
+  "ufw.stay_armed_on_stop": true,
+  "ufw.allow_bosh": [
+    { "description": "bosh ops", "from": ["172.17.0.0/16"], "to_ports": [25555, 4222], "protocol": "tcp" }
+  ],
+  "ufw.rules": [
+    { "description": "test ssh", "from": ["172.17.0.0/16"], "to_ports": [22], "protocol": "tcp" }
+  ]
+}

@@ -1,0 +1,114 @@
+#!/bin/bash
+# Apply the desired firewall state rendered in config/ufw.json.
+# Dry-run (enforce=false) leaves the host firewall untouched.
+# The diff is scoped to rules carrying this instance group's comment tag:
+# foreign rules (manual ufw usage, other tooling) are never modified.
+set -e -o pipefail
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+JOB=/var/vcap/jobs/ufw
+DATA=/var/vcap/data/ufw
+mkdir -p "${DATA}"
+
+# defensive re-seed: covers monit drift-restarts, which skip bin/pre-start
+bash "${JOB}/bin/pre-start"
+
+python3 - "${JOB}" "${DATA}" <<'PY'
+import hashlib
+import json
+import shlex
+import subprocess
+import sys
+
+job, data = sys.argv[1:3]
+cfg_path = job + "/config/ufw.json"
+
+with open(cfg_path) as fh:
+    cfg = json.load(fh)
+cfg_hash = hashlib.sha256(open(cfg_path, "rb").read()).hexdigest()
+marker = data + "/applied.hash"
+tag = cfg["tag"]
+
+
+def log(msg):
+    print("[ufw] " + msg)
+    sys.stdout.flush()
+
+
+def ufw(*args, check=True):
+    proc = subprocess.run([job + "/bin/ufw"] + list(args),
+                          capture_output=True, text=True)
+    out = (proc.stdout + proc.stderr).strip()
+    if check and proc.returncode != 0:
+        raise RuntimeError("ufw %s -> rc=%d: %s" % (" ".join(args), proc.returncode, out))
+    return proc.returncode, out
+
+
+if not cfg["enforce"]:
+    with open(cfg_path) as fh:
+        rendered = fh.read()
+    with open(data + "/dry-run-rendered.json", "w") as fh:
+        fh.write(rendered)
+    log("DRY-RUN (enforce=false): firewall NOT modified. Desired rules for '%s':" % tag)
+    for cmd in cfg["commands"]:
+        log("  ufw " + cmd)
+    sys.exit(0)
+
+# base posture (persisted by the ufw CLI in /etc/default/ufw, idempotent)
+ufw("default", "deny", "incoming")
+ufw("default", "allow", "outgoing")
+ufw("default", "deny", "routed")
+ufw("logging", cfg["logging"])
+
+_, status = ufw("status")
+active = status.splitlines()[0].startswith("Status: active") if status else False
+
+# an IPV6 toggle only takes effect across a disable/enable cycle. pre-start
+# (also run above) already set /etc/default/ufw to the wanted mode, so the
+# LIVE mode is tracked through our own marker: mismatch with the wanted mode
+# means the running filter still uses the previous one.
+want_ipv6 = "yes" if cfg["ipv6"] else "no"
+applied_ipv6 = None
+try:
+    with open(data + "/applied.ipv6") as fh:
+        applied_ipv6 = fh.read().strip()
+except OSError:
+    pass
+
+if active and applied_ipv6 != want_ipv6:
+    log("IPV6 mode change (%s -> %s): full re-toggle required" % (applied_ipv6, want_ipv6))
+    ufw("--force", "disable")
+    active = False
+
+# rule set diff, string-level on the exact `ufw show added` round-trip form
+desired = [shlex.split(c) for c in cfg["commands"]]
+_, added = ufw("show", "added")
+current = [shlex.split(line[len("ufw "):])
+           for line in added.splitlines()
+           if line.startswith("ufw ") and ("comment '%s " % tag) in line]
+
+desired_set = {tuple(c) for c in desired}
+current_set = {tuple(c) for c in current}
+
+# add first, prune second: no window where a still-needed rule is already gone
+for cmd in desired:
+    if tuple(cmd) not in current_set:
+        log("adding: " + " ".join(cmd))
+        ufw(*cmd)
+
+if not active:
+    log("activating firewall")
+    ufw("--force", "enable")
+
+for cmd in current:
+    if tuple(cmd) not in desired_set:
+        log("removing stale: " + " ".join(cmd))
+        ufw("delete", *cmd)
+
+with open(marker, "w") as fh:
+    fh.write(cfg_hash)
+with open(data + "/applied.ipv6", "w") as fh:
+    fh.write(want_ipv6)
+
+log("applied: %d rules, firewall active, tag %s" % (len(desired), tag))
+PY

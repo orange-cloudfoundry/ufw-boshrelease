@@ -1,0 +1,19 @@
+apiVersion: vendir.k14s.io/v1alpha1
+kind: Config
+
+minimumRequiredVersion: 0.34.0
+directories:
+# doc: https://carvel.dev/vendir/docs/v0.40.x/vendir-spec/
+# Upstream: ufw lives on Launchpad (no GitHub repo, no tagged tarball hosting).
+# We vendor the Debian orig tarball from the Ubuntu source archive: it is the
+# pristine upstream release, content-addressed by Launchpad's source archive,
+# and matches the version shipped by the ubuntu-jammy stemcell generation.
+# Bump manually (once per stemcell OS generation): pick the new series page
+# https://launchpad.net/ubuntu/<series>/+source/ufw , take the *.orig.tar.gz
+# link, update url + sha256 below.
+- path: src/ufw
+  contents:
+  - path: tarball
+    http:
+      url: https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/ufw/0.36.1-4ubuntu0.1/ufw_0.36.1.orig.tar.gz
+      sha256: 1c57e78fbf2970f0cc9c56ea87a231e6d83d825e55b9e31e2c88b91b0ea03c8c

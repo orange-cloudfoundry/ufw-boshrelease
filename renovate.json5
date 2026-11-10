@@ -1,0 +1,39 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:best-practices', //See https://docs.renovatebot.com/upgrade-best-practices/#use-the-configbest-practices-preset
+    ':disableRateLimiting',
+    'github>orange-cloudfoundry/renovate-public-presets:boshreleases-default.json5',
+  ],
+  enabledManagers: [
+    'github-actions',
+  ],
+  ignorePaths: [
+    'packages/**',
+    'releases/**',
+    'manifests/**',
+    'jobs/**',
+  ],
+  // NOTE: upstream ufw is NOT watched: it lives on Launchpad without a
+  // GitHub/datasource-friendly release feed, and its Ubuntu-archive URL carries
+  // a distro-patch segment Renovate cannot rewrite. Bumps are manual, once per
+  // stemcell OS generation (see CONTRIBUTING.md).
+  automergeStrategy: 'merge-commit',
+  baseBranchPatterns: [
+    '$default',
+  ],
+  packageRules: [
+    {
+      description: 'Add common labels',
+      addLabels: [
+        'datasource/{{datasource}}',
+        'depName/{{depNameSanitized}}',
+        'manager/{{manager}}',
+        'hasReleaseNotes/{{hasReleaseNotes}}',
+      ],
+      matchDepNames: [
+        '*',
+      ],
+    },
+  ],
+}

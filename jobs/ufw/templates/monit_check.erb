@@ -1,0 +1,71 @@
+#!/bin/bash
+# Monit health probe (check program): exit 0 = firewall healthy, non-zero =
+# monit runs bin/ctl start which re-applies the desired state.
+#   - dry-run mode is always healthy (nothing to enforce)
+#   - firewall must be active
+#   - the rendered config must match what was last applied
+#   - the live managed rule set must equal the desired set
+set -e -o pipefail
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+JOB=/var/vcap/jobs/ufw
+DATA=/var/vcap/data/ufw
+
+python3 - "${JOB}" "${DATA}" <<'PY'
+import hashlib
+import json
+import shlex
+import subprocess
+import sys
+
+job, data = sys.argv[1:3]
+cfg_path = job + "/config/ufw.json"
+
+with open(cfg_path) as fh:
+    raw = fh.read()
+cfg = json.loads(raw)
+
+if not cfg["enforce"]:
+    sys.exit(0)
+
+tag = cfg["tag"]
+
+
+def ufw(*args):
+    return subprocess.run([job + "/bin/ufw"] + list(args),
+                          capture_output=True, text=True)
+
+
+status = ufw("status")
+if not status.stdout.startswith("Status: active"):
+    print("[ufw] check failed: firewall not active")
+    sys.exit(1)
+
+cfg_hash = hashlib.sha256(raw.encode()).hexdigest()
+try:
+    with open(data + "/applied.hash") as fh:
+        applied = fh.read().strip()
+except OSError:
+    applied = None
+if applied != cfg_hash:
+    print("[ufw] check failed: rendered config differs from last applied")
+    sys.exit(1)
+
+added = ufw("show", "added")
+desired = {tuple(shlex.split(c)) for c in cfg["commands"]}
+current = {tuple(shlex.split(line[len("ufw "):]))
+           for line in added.stdout.splitlines()
+           if line.startswith("ufw ") and ("comment '%s " % tag) in line}
+if desired != current:
+    missing = desired - current
+    stale = current - desired
+    print("[ufw] check failed: %d missing / %d stale managed rules"
+          % (len(missing), len(stale)))
+    for cmd in missing:
+        print("[ufw]   missing: " + " ".join(cmd))
+    for cmd in stale:
+        print("[ufw]   stale: " + " ".join(cmd))
+    sys.exit(1)
+
+sys.exit(0)
+PY

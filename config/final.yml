@@ -1,0 +1,11 @@
+---
+blobstore:
+  provider: s3
+  options:
+    # TODO(infra): create this GCS bucket (s3-compat endpoint) and the
+    # AWS_BOSH_ACCES_KEY_ID / AWS_BOSH_SECRET_ACCES_KEY repo secrets, like the
+    # sibling releases (see orange-k3s-wrapper-boshrelease, orange-coroot-node-agent-boshrelease).
+    bucket_name: orange-ufw-boshrelease
+    region: eu
+    host: storage.googleapis.com
+final_name: ufw

@@ -1,0 +1,49 @@
+---
+# Scratch manifest to smoke-test the release standalone (no runtime-config add-on).
+# Usage (see README for the dev-release flow):
+#   bosh deploy manifests/ufw.yml \
+#     -v bosh_subnet=10.0.4.0/24 -v jumpbox=10.0.4.50/32 -v apps_subnet=10.20.30.0/24
+name: ufw-test
+releases:
+- name: ufw
+  version: latest
+stemcells:
+- alias: default
+  os: ubuntu-jammy
+  version: latest
+update:
+  canaries: 1
+  max_in_flight: 1
+  canary_watch_time: 1000-60000
+  update_watch_time: 1000-60000
+instance_groups:
+- name: firewall-test
+  instances: 1
+  azs: [z1]
+  vm_type: default
+  networks:
+  - name: default
+  jobs:
+  - name: ufw
+    release: ufw
+    properties:
+      ufw:
+        enforce: false
+        allow_bosh:
+        - description: bosh agent and nats/hm from bosh subnet
+          from: ["((bosh_subnet))"]
+          to_ports: [25555, 4222]
+          protocol: tcp
+        - description: node exporter from monitoring
+          from: ["((bosh_subnet))"]
+          to_ports: [9100, 9101]
+          protocol: tcp
+        - description: ssh from jumpbox
+          from: ["((jumpbox))"]
+          to_ports: [22]
+          protocol: tcp
+        rules:
+        - description: ssh from apps subnet (smoke rule)
+          from: ["((apps_subnet))"]
+          to_ports: [22]
+          protocol: tcp

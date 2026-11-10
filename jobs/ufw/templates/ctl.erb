@@ -1,0 +1,48 @@
+#!/bin/bash
+# Job control: invoked by monit (start/stop) and by the BOSH agent (drain).
+set -e -o pipefail
+
+export JOB_DIR=/var/vcap/jobs/ufw
+export PATH=/var/vcap/packages/ufw/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export LD_LIBRARY_PATH=/var/vcap/packages/ufw/lib
+
+log_stream() {
+  logger -tag ufw -p user."$1" 2>/dev/null || cat
+}
+
+case $1 in
+  start)
+    job_pidfile_path=/var/vcap/sys/run/ufw/ufw.pid
+    job_run_path=/var/vcap/sys/run/ufw
+
+    mkdir -p "$(dirname "$job_pidfile_path")" "$job_run_path"
+    echo $$ > "${job_pidfile_path}"
+
+    echo "job started at $(date)" | log_stream info
+    "${JOB_DIR}/bin/start" 2>&1 | log_stream info
+    echo "job finished (apply is a one-shot) at $(date)" | log_stream info
+
+    rm -f "${job_pidfile_path}"
+    ;;
+
+  stop)
+    "${JOB_DIR}/bin/stop" 2>&1 | log_stream info
+    ;;
+
+  restart)
+    $0 stop
+    $0 start
+    ;;
+
+  drain)
+    # No long-running process to drain. Keep filtering during a redeploy:
+    # staying armed is the property ufw.stay_armed_on_stop governs at stop.
+    echo "drain: nothing to wait for, exiting 0 at $(date)" | log_stream info
+    exit 0
+    ;;
+
+  *)
+    echo "Usage: $0 {start|stop|restart|drain}"
+    exit 1
+    ;;
+esac

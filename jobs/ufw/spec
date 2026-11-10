@@ -1,0 +1,76 @@
+---
+name: ufw
+description: |
+  VM-level inbound firewall management using the packaged ufw frontend (own
+  package, no dependency on stemcell-shipped ufw). Applies a declarative list
+  of inbound allow rules over a default-deny-incoming / default-allow-outgoing
+  posture, plus a mandatory operational allow baseline (BOSH agent, health
+  monitor, node exporter, SSH) that rules cannot remove. Designed to be
+  delivered fleet-wide through runtime-config addons, one addon per exposed
+  protocol, scoped with include.jobs.
+
+  Modes:
+  - enforce=false (default): the desired rule set is rendered and logged for
+    review, the host firewall is left untouched (rollout dry-run).
+  - stay_armed_on_stop=true (default): stopping/unmonitoring the job keeps the
+    applied rules active; reboot persistence is provided by monit re-running
+    the apply at boot. Set false for debug disarming.
+
+  The job owns only the rules it tagged in comments ('paas-ufw/<instance
+  group>'); manually added ufw rules and other firewall tooling are never
+  touched. Rendering fails (deploy aborts, firewall untouched) on invalid
+  CIDRs/ports or missing baseline CIDRs.
+packages:
+- ufw
+templates:
+  ufw.json.erb: config/ufw.json
+  ufw-cli.erb: bin/ufw
+  pre-start.erb: bin/pre-start
+  start.erb: bin/start
+  stop.erb: bin/stop
+  monit_check.erb: bin/monit_check
+  ctl.erb: bin/ctl
+consumes: []
+properties:
+  ufw.rules:
+    description: |
+      Inbound allow rules. List of {description, from, to_ports, protocol}:
+      from: list of source CIDRs (e.g. 10.20.30.0/24, fe80::/64),
+      to_ports: list of ports or ranges (integer or "3306:3308"),
+      protocol: tcp | udp | tcp/udp.
+      Rendered as: ufw allow from <cidr> to any port <port> proto <protocol>
+    default: []
+    example:
+    - description: mysql from apps subnet
+      from: ["10.20.30.0/24"]
+      to_ports: [3306]
+      protocol: tcp
+  ufw.allow_bosh:
+    description: |
+      Mandatory operational allow baseline, always applied before ufw.rules
+      and impossible to override: BOSH agent (25555), agent/health-monitor
+      (4222), node exporter (9100,9101) and SSH (22) source CIDRs. No default
+      on purpose: rendering FAILS when empty, so a forgotten addon property
+      aborts the deploy instead of locking the director out of its VMs.
+      Same entry shape as ufw.rules.
+    example:
+    - description: bosh agent + nats/hm from bosh subnet
+      from: ["10.0.4.0/24"]
+      to_ports: [25555, 4222]
+      protocol: tcp
+    - description: ssh from jumpbox
+      from: ["10.0.4.50/32"]
+      to_ports: [22]
+      protocol: tcp
+  ufw.enforce:
+    description: "false: render and report the desired rules without touching the firewall (dry-run). true: activate them."
+    default: false
+  ufw.stay_armed_on_stop:
+    description: "true: keep rules armed when the job stops (default, survives reboots via monit). false: ufw disable on stop (debug escape hatch)."
+    default: true
+  ufw.logging:
+    description: "ufw logging level: low | medium | high | full | off"
+    default: low
+  ufw.ipv6:
+    description: "Manage ip6tables alongside iptables. BOSH stemcell/IaaS networking is IPv4-only: off by default, opt-in"
+    default: false

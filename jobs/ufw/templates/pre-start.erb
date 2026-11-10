@@ -1,0 +1,40 @@
+#!/bin/bash
+# Idempotent seed of the framework files the packaged ufw expects at its
+# baked-in canonical paths. Called by BOSH (bin/pre-start) before every start,
+# and defensively by bin/start on drift-triggered monit restarts.
+#
+# Ownership rules:
+# - /etc/ufw/user*.rules  : seeded ONLY when absent (they hold applied rules)
+# - /etc/ufw/ufw.conf     : seeded ONLY when absent (ENABLED is ufw's state)
+# - framework templates   : force-refreshed (before/after rules, sysctl, hooks,
+#                           /lib/ufw, /usr/share/ufw/iptables, profiles) so a
+#                           release upgrade actually lands
+set -e -o pipefail
+
+PKG=/var/vcap/packages/ufw
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+mkdir -p /etc/ufw/applications.d /etc/default /lib/ufw /usr/share/ufw
+
+# framework templates: force
+for f in before.rules after.rules before6.rules after6.rules sysctl.conf before.init after.init; do
+  if [ -f "${PKG}/etc/ufw/${f}" ]; then
+    install -m 0640 "${PKG}/etc/ufw/${f}" "/etc/ufw/${f}"
+  fi
+done
+cp -a -f "${PKG}/etc/ufw/applications.d/." /etc/ufw/applications.d/
+install -m 0755 "${PKG}/lib/ufw/ufw-init" /lib/ufw/ufw-init
+install -m 0755 "${PKG}/lib/ufw/ufw-init-functions" /lib/ufw/ufw-init-functions
+cp -a -f "${PKG}/usr/share/ufw/iptables/." /usr/share/ufw/iptables/
+
+# state-owned files: seed only when absent
+for f in user.rules user6.rules ufw.conf; do
+  if [ ! -f "/etc/ufw/${f}" ] && [ -f "${PKG}/etc/ufw/${f}" ]; then
+    install -m 0640 "${PKG}/etc/ufw/${f}" "/etc/ufw/${f}"
+  fi
+done
+
+# /etc/default/ufw ships the wanted posture (input DROP, output ACCEPT,
+# forward DROP): force-restore from package, then apply ipv6 property.
+install -m 0644 "${PKG}/etc/default/ufw" /etc/default/ufw
+sed -i -E 's/^IPV6=.*/IPV6=<%= p('ufw.ipv6') ? 'yes' : 'no' %>/' /etc/default/ufw

@@ -1,0 +1,49 @@
+set -e # exit immediately if a simple command exits with a non-zero status
+set -u # report the usage of uninitialized variables
+
+# Available variables
+# $BOSH_COMPILE_TARGET - where this package & spec'd source files are available
+# $BOSH_INSTALL_TARGET - where you copy/install files to be included in package
+export HOME=/var/vcap
+
+# explicit early check (error otherwise surfaces cryptically in setup.py):
+# the BOSH ubuntu stemcell ships distutils + the Debian --install-layout patch.
+if ! python3 -c "from distutils.command.install import install" 2>/dev/null; then
+  echo "ERROR: compile VM python3 lacks distutils (expected on BOSH ubuntu stemcells)" >&2
+  exit 1
+fi
+
+tar xzf "${BOSH_COMPILE_TARGET}/ufw/ufw.orig.tar.gz"
+cd ufw-*/
+
+# setup.py runs 'make mo' (needs gettext/msgfmt) only when locales/mo is empty.
+# Translations are useless for a headless frontend: keep the dir non-empty to skip.
+mkdir -p locales/mo
+touch locales/mo/.keep
+
+# Install with canonical baked-in paths: ufw's setup.py stamps #PREFIX#->/usr,
+# #CONFIG_PREFIX#->/etc, #STATE_PREFIX#->/lib/ufw, #SHARE_DIR#->/usr/share/ufw
+# and --root only relocates the files on disk (same trick Debian builds with).
+# The job's pre-start seeds /etc/ufw, /etc/default/ufw, /lib/ufw and
+# /usr/share/ufw/iptables from this package; the job calls the CLI through
+# bin/ufw with PYTHONPATH pointed at the packaged python modules.
+#
+# Notes:
+# - setup.py hard-fails unless iptables{,6,-restore} exist on the compile VM:
+#   always true on BOSH stemcells (/usr/sbin).
+# - UFW_SKIP_CHECKS=1 skips runtime firewall checks at build time
+#   (same as upstream's own Makefile build target).
+# - --install-layout=deb places modules in usr/lib/python3/dist-packages,
+#   matching Ubuntu and keeping the import path stable.
+UFW_SKIP_CHECKS=1 python3 ./setup.py install --root="${BOSH_INSTALL_TARGET}" --install-layout=deb --prefix=/usr
+
+# record provenance for ops (ufw --version only shows the frontend version)
+grep -oP "^ufw_version = '\K[^']+" setup.py > "${BOSH_INSTALL_TARGET}/UPSTREAM-VERSION"
+
+test -x "${BOSH_INSTALL_TARGET}/usr/sbin/ufw"
+test -d "${BOSH_INSTALL_TARGET}/usr/share/ufw/iptables"
+test -d "${BOSH_INSTALL_TARGET}/etc/ufw"
+test -f "${BOSH_INSTALL_TARGET}/lib/ufw/ufw-init"
+# python modules must land in a python3 {dist,site}-packages dir
+test -f "${BOSH_INSTALL_TARGET}/usr/lib/python3/dist-packages/ufw/common.py" \
+  || test -f "${BOSH_INSTALL_TARGET}/usr/lib/python3/site-packages/ufw/common.py"

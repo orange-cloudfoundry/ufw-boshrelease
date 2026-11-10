@@ -1,0 +1,39 @@
+#!/bin/bash
+# Stop behavior is governed by ufw.stay_armed_on_stop:
+# - true (default): keep the applied rules armed. The firewall is a policy
+#   applier, not a daemon; an inactive job with rules in place is the wanted
+#   steady state, and it keeps VMs filtered across bosh stop/reboot.
+# - false: disarm (ufw disable). Debug escape hatch, e.g. to isolate the
+#   firewall as the cause of a connectivity issue.
+set -e -o pipefail
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+JOB=/var/vcap/jobs/ufw
+DATA=/var/vcap/data/ufw
+
+python3 - "${JOB}" "${DATA}" <<'PY'
+import json
+import subprocess
+import sys
+
+job, data = sys.argv[1:3]
+with open(job + "/config/ufw.json") as fh:
+    cfg = json.load(fh)
+
+
+def log(msg):
+    print("[ufw] " + msg)
+    sys.stdout.flush()
+
+
+if cfg["stay_armed_on_stop"]:
+    log("stop: stay_armed_on_stop=true, rules left armed")
+    sys.exit(0)
+
+proc = subprocess.run([job + "/bin/ufw", "status"], capture_output=True, text=True)
+if proc.stdout.startswith("Status: active"):
+    subprocess.run([job + "/bin/ufw", "--force", "disable"], check=True)
+    log("stop: stay_armed_on_stop=false, firewall DISABLED")
+else:
+    log("stop: firewall not active, nothing to disarm")
+PY

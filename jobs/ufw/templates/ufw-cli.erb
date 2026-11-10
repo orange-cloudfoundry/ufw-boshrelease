@@ -1,0 +1,16 @@
+#!/bin/bash
+# ufw CLI wrapper: invokes the packaged ufw with its packaged python modules.
+# The stemcell ships no ufw; the package is self-contained under /var/vcap/packages/ufw
+# while ufw's own baked-in paths (/etc/ufw, /lib/ufw, /usr/share/ufw) are the
+# canonical ones, seeded by bin/pre-start.
+set -e -o pipefail
+
+PKG=/var/vcap/packages/ufw
+
+MODPATH="${PKG}/usr/lib/python3/dist-packages"
+if [ ! -d "${MODPATH}" ]; then
+  MODPATH="${PKG}/usr/lib/python3/site-packages"
+fi
+
+export PYTHONPATH="${MODPATH}${PYTHONPATH:+:${PYTHONPATH}}"
+exec "${PKG}/usr/sbin/ufw" "$@"
