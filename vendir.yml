@@ -28,3 +28,14 @@ directories:
       # tarball present across vendir versions; packaging does its own
       # `tar xzf` from the blob independently of this.
       disableUnpack: true
+
+# ufw 0.36.1's setup.py requires distutils at build time. BOSH stemcells can
+# expose Python without the optional distutils/setuptools packages, so vendor a
+# compatible setuptools wheel and install it into an isolated compile env.
+- path: src/setuptools
+  contents:
+  - path: wheel
+    http:
+      url: https://files.pythonhosted.org/packages/0d/6d/b4752b044bf94cb802d88a888dc7d288baaf77d7910b7dedda74b5ceea0c/setuptools-79.0.1-py3-none-any.whl
+      sha256: e147c0549f27767ba362f9da434eab9c5dc0045d5304feb602a0af001089fc51
+      disableUnpack: true

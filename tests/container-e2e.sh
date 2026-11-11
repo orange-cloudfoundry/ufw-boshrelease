@@ -1,18 +1,23 @@
 #!/bin/bash
-# e2e: simulate the BOSH runtime layout on jammy and exercise the job.
+# e2e: simulate the BOSH runtime layout on the stemcell container image
+# (ghcr.io/cloudfoundry/ubuntu-jammy-stemcell:1.1474) and exercise the job.
+# Run: docker run --rm -v <repo>:/r -v <rendered-e2e>:/e2e ghcr.io/cloudfoundry/ubuntu-jammy-stemcell:1.1474 bash /r/tests/container-e2e.sh
+# iptables ships with the stemcell image; python3 needs no distutils/setuptools
+# (packaging vendors its own isolated build env).
 set -u
 PASS=0; FAIL=0
 ok()   { PASS=$((PASS+1)); echo "PASS $1"; }
 bad()  { FAIL=$((FAIL+1)); echo "FAIL $1: $2"; }
 
-apt-get update -qq >/dev/null 2>&1
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq iptables python3 python3-distutils >/dev/null 2>&1
-
 # --- runtime layout ---
 mkdir -p /var/vcap/packages /var/vcap/jobs /var/vcap/data /var/vcap/sys/run
-mkdir -p /compile/ufw
+mkdir -p /compile/ufw /compile/setuptools/wheel
 cp /r/blobs/ufw/ufw.orig.tar.gz /compile/ufw/
-( cd /compile && BOSH_COMPILE_TARGET=/compile BOSH_INSTALL_TARGET=/var/vcap/packages/ufw bash /r/packages/ufw/packaging >/dev/null 2>&1 )
+cp /r/blobs/setuptools/wheel/setuptools-79.0.1-py3-none-any.whl /compile/setuptools/wheel/
+if ! ( cd /compile && BOSH_COMPILE_TARGET=/compile BOSH_INSTALL_TARGET=/var/vcap/packages/ufw bash /r/packages/ufw/packaging ); then
+  bad "packaging" "packages/ufw/packaging failed on stemcell python"
+  echo "PASS=$PASS FAIL=$FAIL"; exit 1
+fi
 cp -r /e2e/rendered /var/vcap/jobs/ufw
 J=/var/vcap/jobs/ufw
 UFW="$J/bin/ufw"

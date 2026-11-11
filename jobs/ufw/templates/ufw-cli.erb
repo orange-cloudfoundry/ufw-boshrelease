@@ -7,9 +7,17 @@ set -e -o pipefail
 
 PKG=/var/vcap/packages/ufw
 
-MODPATH="${PKG}/usr/lib/python3/dist-packages"
-if [ ! -d "${MODPATH}" ]; then
-  MODPATH="${PKG}/usr/lib/python3/site-packages"
+MODPATH=""
+for candidate in "${PKG}"/usr/lib/python3*/dist-packages "${PKG}"/usr/lib/python3*/site-packages \
+                 "${PKG}"/usr/lib/python3/dist-packages "${PKG}"/usr/lib/python3/site-packages; do
+  if [ -d "${candidate}/ufw" ]; then
+    MODPATH="${candidate}"
+    break
+  fi
+done
+if [ -z "${MODPATH}" ]; then
+  echo "ufw package error: no python3 (dist|site)-packages/ufw found under ${PKG}/usr/lib" >&2
+  exit 1
 fi
 
 export PYTHONPATH="${MODPATH}${PYTHONPATH:+:${PYTHONPATH}}"
