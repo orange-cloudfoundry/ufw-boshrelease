@@ -32,6 +32,11 @@ function addBlobOnChecksumChange() {
 # changes on an upstream bump; the version lives in vendir.yml + blobs.yml sha
 addBlobOnChecksumChange src/ufw/tarball/ufw_0.36.1.orig.tar.gz ufw/ufw.orig.tar.gz
 
+# setuptools wheel for the isolated compile env (packages/ufw spec file
+# ufw/setuptools-79.0.1-py3-none-any.whl): versioned blob name, bumped together
+# with the vendir pin.
+addBlobOnChecksumChange src/setuptools/wheel/setuptools-79.0.1-py3-none-any.whl ufw/setuptools-79.0.1-py3-none-any.whl
+
 # Inspired by https://github.com/orange-cloudfoundry/bosh-release-action/blob/8732ff085712d9980fc66e50892cb9c3d7a3f884/entrypoint.sh#L48-L58
 function configureS3BlobStore() {
   if [ ! -z "${AWS_BOSH_ACCES_KEY_ID}" ]; then

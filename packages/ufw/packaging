@@ -10,7 +10,7 @@ export HOME=/var/vcap
 # omit distutils' commands and/or setuptools. Vendor a compatible setuptools
 # wheel and build an isolated compile environment: this keeps package
 # compilation hermetic and independent of the stemcell OS Python modules.
-SETUPTOOLS_WHEEL="${BOSH_COMPILE_TARGET}/setuptools/wheel/setuptools-79.0.1-py3-none-any.whl"
+SETUPTOOLS_WHEEL="${BOSH_COMPILE_TARGET}/ufw/setuptools-79.0.1-py3-none-any.whl"
 test -f "${SETUPTOOLS_WHEEL}"
 BUILD_ENV="${BOSH_COMPILE_TARGET}/build-env"
 BUILD_PYTHON="${BUILD_ENV}/bin/python"

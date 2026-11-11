@@ -11,9 +11,9 @@ bad()  { FAIL=$((FAIL+1)); echo "FAIL $1: $2"; }
 
 # --- runtime layout ---
 mkdir -p /var/vcap/packages /var/vcap/jobs /var/vcap/data /var/vcap/sys/run
-mkdir -p /compile/ufw /compile/setuptools/wheel
+mkdir -p /compile/ufw
 cp /r/blobs/ufw/ufw.orig.tar.gz /compile/ufw/
-cp /r/blobs/setuptools/wheel/setuptools-79.0.1-py3-none-any.whl /compile/setuptools/wheel/
+cp /r/blobs/ufw/setuptools-79.0.1-py3-none-any.whl /compile/ufw/
 if ! ( cd /compile && BOSH_COMPILE_TARGET=/compile BOSH_INSTALL_TARGET=/var/vcap/packages/ufw bash /r/packages/ufw/packaging ); then
   bad "packaging" "packages/ufw/packaging failed on stemcell python"
   echo "PASS=$PASS FAIL=$FAIL"; exit 1

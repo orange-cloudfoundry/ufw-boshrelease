@@ -3,4 +3,4 @@ name: ufw
 dependencies: []
 files:
 - ufw/ufw.orig.tar.gz
-- ../setuptools/wheel/setuptools-79.0.1-py3-none-any.whl
+- ufw/setuptools-79.0.1-py3-none-any.whl

@@ -121,10 +121,25 @@ bosh create-release --name ufw --version 0.0.0-dev+local \
 ```
 
 `vendor.sh` + `addblob.sh` are only needed on a fresh clone or after an
-upstream bump: if `bosh blobs` already lists `ufw/ufw.orig.tar.gz` as
-`(local)`, go straight to `bosh create-release`. `vendor.sh` fetches from the
+upstream bump: if `bosh blobs` already lists both `ufw/ufw.orig.tar.gz` and
+`ufw/setuptools-<version>-py3-none-any.whl` as `(local)`, go straight to
+`bosh create-release`. `vendor.sh` fetches from the
 Ubuntu archive CDN (Launchpad's own file host is flaky); on proxied runners
 verify `curl -sI https://archive.ubuntu.com/ubuntu/pool/main/u/ufw/` first.
+
+### Blob path convention (two blobs, one package)
+
+Every vendored input must be registered with `addblob.sh` under a key prefixed
+with its package name (`ufw/<file>`), listed in `packages/ufw/spec` with that
+*same* key, and read in `packaging` from `${BOSH_COMPILE_TARGET}/ufw/<file>`:
+BOSH materializes each `config/blobs.yml` key at `$BOSH_COMPILE_TARGET/<key>`,
+and package `spec.files` entries must match the key exactly. A `../`-escaping
+pattern (e.g. `../setuptools/wheel/x.whl`) never matches a blob — blobs are
+keyed from the release root, not from the package directory — and fails
+`bosh create-release` with `Missing files for pattern ...`. Currently packaged:
+`ufw/ufw.orig.tar.gz` (upstream source) and
+`ufw/setuptools-79.0.1-py3-none-any.whl` (isolated compile env, see
+`packages/ufw/packaging`).
 
 ## Blobstore bootstrap (TODO)
 

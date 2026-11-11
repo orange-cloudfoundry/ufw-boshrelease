@@ -1,6 +1,10 @@
 name: create-dev-release-on-PRs
 
 on:
+  # manual trigger: `push` deliberately ignores main, so a direct push to main
+  # would otherwise ship an unverified release (a broken blob/spec path reached
+  # main this way once). Run this workflow manually on main to verify.
+  workflow_dispatch:
   push:
     branches-ignore:
       - main
