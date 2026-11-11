@@ -4,4 +4,8 @@ directories:
   - http: {}
     path: tarball
   path: src/ufw
+- contents:
+  - http: {}
+    path: wheel
+  path: src/setuptools
 kind: LockConfig
