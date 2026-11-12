@@ -1,7 +1,4 @@
-check program ufw with program /var/vcap/jobs/ufw/bin/monit_check
-  every 2 cycles
-  start program "/var/vcap/jobs/ufw/bin/ctl start"
+check process ufw with pidfile /var/vcap/sys/run/ufw/ufw.pid
+  start program "/var/vcap/jobs/ufw/bin/ctl start" with timeout 90 seconds
   stop program "/var/vcap/jobs/ufw/bin/ctl stop"
-  with timeout 90 seconds
-  if status != 0 then restart
   group vcap

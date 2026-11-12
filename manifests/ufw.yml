@@ -20,6 +20,7 @@ instance_groups:
 - name: firewall-test
   instances: 1
   azs: [z1]
+  stemcell: default
   vm_type: default
   networks:
   - name: default

@@ -22,11 +22,17 @@ case $1 in
     "${JOB_DIR}/bin/start" 2>&1 | log_stream info
     echo "job finished (apply is a one-shot) at $(date)" | log_stream info
 
-    rm -f "${job_pidfile_path}"
+    # Replace this shell with sleep (ctl becomes the daemon itself)
+    exec sleep infinity
     ;;
 
   stop)
+    job_pidfile_path=/var/vcap/sys/run/ufw/ufw.pid
     "${JOB_DIR}/bin/stop" 2>&1 | log_stream info
+    if [ -f "${job_pidfile_path}" ]; then
+      kill "$(cat "${job_pidfile_path}")" 2>/dev/null || true
+      rm -f "${job_pidfile_path}"
+    fi
     ;;
 
   restart)
