@@ -22,8 +22,15 @@ case $1 in
     "${JOB_DIR}/bin/start" 2>&1 | log_stream info
     echo "job finished (apply is a one-shot) at $(date)" | log_stream info
 
-    # Replace this shell with sleep (ctl becomes the daemon itself)
-    exec sleep infinity
+    # Start the sentinel daemon for monit (detach from current session with nohup+setsid)
+    nohup setsid "${JOB_DIR}/bin/daemon" >/dev/null 2>&1 &
+    echo $! > "${job_pidfile_path}"
+    sleep 0.3
+    # Verify it's alive
+    if ! kill -0 "$(cat "${job_pidfile_path}")" 2>/dev/null; then
+      echo "ERROR: daemon did not survive (check permissions or system limits)" | log_stream error
+      exit 1
+    fi
     ;;
 
   stop)
