@@ -15,6 +15,7 @@ PKG=/var/vcap/packages/ufw
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
 mkdir -p /etc/ufw/applications.d /etc/default /lib/ufw /usr/share/ufw
+mkdir -p /var/vcap/sys/log/ufw
 
 # framework templates: force
 for f in before.rules after.rules before6.rules after6.rules sysctl.conf before.init after.init; do

@@ -19,7 +19,7 @@ case $1 in
     echo $$ > "${job_pidfile_path}"
 
     echo "job started at $(date)" | log_stream info
-    "${JOB_DIR}/bin/start" 2>&1 | log_stream info
+    "${JOB_DIR}/bin/start" >> /var/vcap/sys/log/ufw/start.log 2>&1
     echo "job finished (apply is a one-shot) at $(date)" | log_stream info
 
     # Start the sentinel daemon for monit (detach from current session with nohup+setsid)
@@ -35,7 +35,7 @@ case $1 in
 
   stop)
     job_pidfile_path=/var/vcap/sys/run/ufw/ufw.pid
-    "${JOB_DIR}/bin/stop" 2>&1 | log_stream info
+    "${JOB_DIR}/bin/stop" >> /var/vcap/sys/log/ufw/stop.log 2>&1
     if [ -f "${job_pidfile_path}" ]; then
       kill "$(cat "${job_pidfile_path}")" 2>/dev/null || true
       rm -f "${job_pidfile_path}"
@@ -50,7 +50,7 @@ case $1 in
   drain)
     # No long-running process to drain. Keep filtering during a redeploy:
     # staying armed is the property ufw.stay_armed_on_stop governs at stop.
-    echo "drain: nothing to wait for, exiting 0 at $(date)" | log_stream info
+    echo "drain: nothing to wait for, exiting 0 at $(date)" >> /var/vcap/sys/log/ufw/drain.log 2>&1
     exit 0
     ;;
 
