@@ -1,6 +1,8 @@
 ufw/setuptools-79.0.1-py3-none-any.whl:
   size: 1256281
+  object_id: 6a91d554-f75c-48c1-6142-30a89cd898fd
   sha: sha256:e147c0549f27767ba362f9da434eab9c5dc0045d5304feb602a0af001089fc51
 ufw/ufw.orig.tar.gz:
   size: 583123
+  object_id: 3a005870-e79e-41ef-4a78-eaf974db6cd0
   sha: sha256:1c57e78fbf2970f0cc9c56ea87a231e6d83d825e55b9e31e2c88b91b0ea03c8c
