@@ -1,3 +1,24 @@
 #!/bin/bash
-# Sentinel daemon for monit (apply-once jobs need a running process)
-exec tail -f /dev/null
+# Sentinel + supervisor daemon (monit's pid target for this one-shot apply job).
+# Drift repair is driven here rather than by a monit 'check program' directive:
+# stemcell monit versions differ (warden ships 5.2.5, which lacks check program)
+# and the loop behaves identically everywhere. Each cycle runs bin/monit_check;
+# on any unhealthy result (firewall inactive, config changed, managed rules
+# drifted) bin/start re-applies the rendered desired state.
+set -o pipefail
+
+JOB_DIR=/var/vcap/jobs/ufw
+LOG_DIR=/var/vcap/sys/log/ufw
+INTERVAL="${UFW_CHECK_INTERVAL:-30}"
+
+while true; do
+  sleep "${INTERVAL}"
+  if ! out="$("${JOB_DIR}/bin/monit_check" 2>&1)"; then
+    echo "drift detected at $(date): ${out}" >> "${LOG_DIR}/ctl.log" 2>&1
+    if "${JOB_DIR}/bin/start" >> "${LOG_DIR}/start.log" 2>&1; then
+      echo "desired state re-applied at $(date)" >> "${LOG_DIR}/ctl.log" 2>&1
+    else
+      echo "ERROR: re-apply failed at $(date) (see start.log)" >> "${LOG_DIR}/ctl.log" 2>&1
+    fi
+  fi
+done

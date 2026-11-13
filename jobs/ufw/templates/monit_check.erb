@@ -1,6 +1,6 @@
 #!/bin/bash
-# Monit health probe (check program): exit 0 = firewall healthy, non-zero =
-# monit runs bin/ctl start which re-applies the desired state.
+# Health probe: exit 0 = firewall healthy, non-zero = bin/daemon (which runs
+# this probe each cycle) re-applies the desired state via bin/start.
 #   - dry-run mode is always healthy (nothing to enforce)
 #   - firewall must be active
 #   - the rendered config must match what was last applied
