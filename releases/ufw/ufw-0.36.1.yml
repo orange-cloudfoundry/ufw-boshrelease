@@ -1,12 +1,12 @@
 name: ufw
 version: 0.36.1
-commit_hash: 0c31262
+commit_hash: 78f315c
 uncommitted_changes: false
 jobs:
 - name: ufw
-  version: d5db57a954cfe8037f210afeb72518686ab13ceb9336d7af325480baa68b6672
-  fingerprint: d5db57a954cfe8037f210afeb72518686ab13ceb9336d7af325480baa68b6672
-  sha1: sha256:17a7e7996b9dddc68d4cfb5d5a3760c7d8e3fc1a48be2cc2925714cfd3f0595a
+  version: 7cbdaec87b293e6c5bd4ecb3d9182207b8ab9c6ad8159fad01ac860a1f2181e6
+  fingerprint: 7cbdaec87b293e6c5bd4ecb3d9182207b8ab9c6ad8159fad01ac860a1f2181e6
+  sha1: sha256:a6c29f8b83c5ab718bd8bf8ca21753f9e57d5ea4c1767c2d58852efbe055af03
   packages:
   - ufw
 packages:
