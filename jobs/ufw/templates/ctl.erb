@@ -6,9 +6,8 @@ export JOB_DIR=/var/vcap/jobs/ufw
 export PATH=/var/vcap/packages/ufw/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export LD_LIBRARY_PATH=/var/vcap/packages/ufw/lib
 
-log_stream() {
-  logger -tag ufw -p user."$1" 2>/dev/null || cat
-}
+LOG_DIR=/var/vcap/sys/log/ufw
+mkdir -p "${LOG_DIR}"
 
 case $1 in
   start)
@@ -18,9 +17,9 @@ case $1 in
     mkdir -p "$(dirname "$job_pidfile_path")" "$job_run_path"
     echo $$ > "${job_pidfile_path}"
 
-    echo "job started at $(date)" | log_stream info
-    "${JOB_DIR}/bin/start" >> /var/vcap/sys/log/ufw/start.log 2>&1
-    echo "job finished (apply is a one-shot) at $(date)" | log_stream info
+    echo "job started at $(date)" >> "${LOG_DIR}/ctl.log" 2>&1
+    "${JOB_DIR}/bin/start" >> "${LOG_DIR}/start.log" 2>&1
+    echo "job finished (apply is a one-shot) at $(date)" >> "${LOG_DIR}/ctl.log" 2>&1
 
     # Start the sentinel daemon for monit (detach from current session with nohup+setsid)
     nohup setsid "${JOB_DIR}/bin/daemon" >/dev/null 2>&1 &
@@ -28,14 +27,14 @@ case $1 in
     sleep 0.3
     # Verify it's alive
     if ! kill -0 "$(cat "${job_pidfile_path}")" 2>/dev/null; then
-      echo "ERROR: daemon did not survive (check permissions or system limits)" | log_stream error
+      echo "ERROR: daemon did not survive (check permissions or system limits)" >> "${LOG_DIR}/ctl.log" 2>&1
       exit 1
     fi
     ;;
 
   stop)
     job_pidfile_path=/var/vcap/sys/run/ufw/ufw.pid
-    "${JOB_DIR}/bin/stop" >> /var/vcap/sys/log/ufw/stop.log 2>&1
+    "${JOB_DIR}/bin/stop" >> "${LOG_DIR}/stop.log" 2>&1
     if [ -f "${job_pidfile_path}" ]; then
       kill "$(cat "${job_pidfile_path}")" 2>/dev/null || true
       rm -f "${job_pidfile_path}"
@@ -50,7 +49,7 @@ case $1 in
   drain)
     # No long-running process to drain. Keep filtering during a redeploy:
     # staying armed is the property ufw.stay_armed_on_stop governs at stop.
-    echo "drain: nothing to wait for, exiting 0 at $(date)" >> /var/vcap/sys/log/ufw/drain.log 2>&1
+    echo "drain: nothing to wait for, exiting 0 at $(date)" >> "${LOG_DIR}/drain.log" 2>&1
     exit 0
     ;;
 
