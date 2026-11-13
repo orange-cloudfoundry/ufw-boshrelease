@@ -50,6 +50,7 @@ MAPPING = {
   'stop.erb' => 'bin/stop',
   'monit_check.erb' => 'bin/monit_check',
   'ctl.erb' => 'bin/ctl',
+  'daemon.sh.erb' => 'bin/daemon',
 }
 
 FileUtils.mkdir_p(File.join(out_dir, 'bin')); FileUtils.mkdir_p(File.join(out_dir, 'config'))

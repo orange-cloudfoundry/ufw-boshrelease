@@ -88,6 +88,39 @@ $UFW status | head -1 | grep -qv "^Status: active" && ok "disarm on stop works" 
 # 8b. ctl wrapper is executable and handles drain
 $J/bin/ctl drain >/dev/null 2>&1 && ok "ctl drain exits 0" || bad "ctl drain" "failed"
 
+# 8c. ctl start does NOT hang (regression: logger pipes blocked this for 90s)
+mkdir -p /var/vcap/sys/log/ufw
+out=$(timeout 30 $J/bin/ctl start 2>&1); rc=$?
+[ $rc -eq 0 ] && ok "ctl start completes within 30s" || bad "ctl start hang/timeout" "rc=$rc out=$out"
+[ -f /var/vcap/sys/log/ufw/ctl.log ] \
+  && grep -q "job started at" /var/vcap/sys/log/ufw/ctl.log \
+  && grep -q "job finished" /var/vcap/sys/log/ufw/ctl.log \
+  && ok "ctl.log written (no logger pipe)" \
+  || bad "ctl.log" "missing or incomplete: $(ls -la /var/vcap/sys/log/ufw/ 2>&1)"
+[ -f /var/vcap/sys/run/ufw/ufw.pid ] && ok "ctl start wrote pidfile" || bad "ctl pidfile" "missing"
+[ -f /var/vcap/sys/log/ufw/start.log ] && ok "start.log written by ctl wrapper" || bad "ctl start.log" "missing"
+
+# 8d. daemon (tail -f /dev/null) actually running, monit can monitor it
+sleep 0.5
+daemon_pid=$(cat /var/vcap/sys/run/ufw/ufw.pid 2>/dev/null || echo "")
+if [ -n "$daemon_pid" ] && kill -0 "$daemon_pid" 2>/dev/null; then
+  ok "ctl start left live daemon pid $daemon_pid (monit-compatible)"
+else
+  bad "ctl daemon" "pidfile pid '$daemon_pid' not alive"
+fi
+
+# 8e. ctl stop terminates daemon and cleans pidfile
+timeout 30 $J/bin/ctl stop >/dev/null 2>&1
+rc=$?
+[ $rc -eq 0 ] && ok "ctl stop completes within 30s" || bad "ctl stop hang/timeout" "rc=$rc"
+[ ! -f /var/vcap/sys/run/ufw/ufw.pid ] && ok "ctl stop removed pidfile" || bad "ctl stop pidfile" "still present"
+if [ -n "$daemon_pid" ] && ! kill -0 "$daemon_pid" 2>/dev/null; then
+  ok "ctl stop terminated daemon process"
+else
+  bad "ctl stop daemon" "pid $daemon_pid still alive"
+fi
+[ -f /var/vcap/sys/log/ufw/stop.log ] && ok "stop.log written" || bad "ctl stop.log" "missing"
+
 # 9. ipv6: default false seeded, tracked through marker, flip re-toggles
 setcfg "d['stay_armed_on_stop']=True"
 $J/bin/start >/dev/null 2>&1   # re-arm after section 8's disarm
