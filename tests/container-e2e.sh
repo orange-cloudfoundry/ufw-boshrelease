@@ -121,6 +121,47 @@ else
 fi
 [ -f /var/vcap/sys/log/ufw/stop.log ] && ok "stop.log written" || bad "ctl stop.log" "missing"
 
+# 8f. daemon supervisor loop automatically repairs drift within check interval
+# This validates the fix from commit 16ab298: bin/daemon runs monit_check every
+# 30s and re-applies on drift, independent of monit 'check program' support.
+setcfg "d['stay_armed_on_stop']=True; d['enforce']=True"
+# Shorter interval for faster test (default 30s would delay e2e too much)
+timeout 60 sh -c "UFW_CHECK_INTERVAL=5 $J/bin/daemon >> $J/../../sys/log/ufw/daemon.log 2>&1 &"
+daemon_loop_pid=$!
+sleep 1
+# Verify daemon loop is actually running
+if ! kill -0 "$daemon_loop_pid" 2>/dev/null; then
+  bad "daemon loop" "supervisor not running (pid $daemon_loop_pid dead)"
+else
+  # Inject drift: delete a managed rule while daemon is supervising
+  initial_rules=$($UFW show added | grep -c '^ufw ')
+  $UFW delete allow from 10.20.30.0/24 to any port 22 proto tcp comment 'paas-ufw/firewall-baseline ssh' >/dev/null 2>&1
+  drifted_rules=$($UFW show added | grep -c '^ufw ')
+  [ "$drifted_rules" -lt "$initial_rules" ] && ok "drift injected (rule deleted)" || bad "drift inject" "count unchanged: $initial_rules"
+  
+  # Wait for one check interval + margin (5s interval + 3s for apply)
+  sleep 8
+  
+  # Daemon should have detected drift and re-applied
+  repaired_rules=$($UFW show added | grep -c '^ufw ')
+  if [ "$repaired_rules" -eq "$initial_rules" ]; then
+    ok "daemon loop auto-repaired drift within check interval"
+  else
+    bad "daemon loop repair" "rules still missing: $repaired_rules vs $initial_rules (see daemon.log)"
+  fi
+  
+  # Check that repair event was logged
+  if grep -q "drift detected" /var/vcap/sys/log/ufw/ctl.log 2>/dev/null; then
+    ok "daemon logged drift detection"
+  else
+    bad "daemon log" "no drift detection message in ctl.log"
+  fi
+  
+  # Clean up daemon loop
+  kill "$daemon_loop_pid" 2>/dev/null || true
+  wait "$daemon_loop_pid" 2>/dev/null || true
+fi
+
 # 9. ipv6: default false seeded, tracked through marker, flip re-toggles
 setcfg "d['stay_armed_on_stop']=True"
 $J/bin/start >/dev/null 2>&1   # re-arm after section 8's disarm

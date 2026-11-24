@@ -96,19 +96,60 @@ On the VM: `/var/vcap/jobs/ufw/bin/ufw status verbose`,
 
 ## Versioning
 
-The bosh release version mirrors the upstream ufw version pinned in
-`vendir.yml` (e.g. bosh release `0.36.1` == ufw `0.36.1`), like the sibling
-coroot-node-agent release. Upstream has no GitHub repo: the Debian *orig*
-tarball is taken from the Ubuntu source archive (content-identical to the
-upstream release, stable URL, sha256-pinned). Bumps are manual — roughly one
-per stemcell OS generation.
+**BOSH release versions are independent of the vendored ufw version**, using
+semantic versioning (semver). The release version reflects changes to the
+release itself (job templates, packaging, properties, CI) rather than mirroring
+the upstream ufw version. This allows releasing BOSH-level fixes and features
+without coupling to upstream ufw releases.
+
+CI automatically bumps versions on merge to main:
+- **Patch** (default): `1.0.0 → 1.0.1` - Any commit without keywords (bug fixes, minor changes)
+- **Minor**: `1.0.1 → 1.1.0` - Commit message contains `minor` or `feat` (new features, upstream ufw bumps)
+- **Major**: `1.1.0 → 2.0.0` - Commit message contains `major` (breaking changes to job properties or behavior)
+
+**Version Matrix:**
+
+| BOSH Release | Vendored UFW | Notable Changes |
+|--------------|--------------|-----------------|
+| 1.0.0        | 0.36.1       | First independent release with drift-repair fix (daemon supervisor loop) |
+| 0.36.1       | 0.36.1       | Initial release (deprecated: used vendor-coupled versioning) |
+
+**Commit Message Examples:**
+
+```bash
+# Patch bump (default)
+git commit -m "fix(job): repair drift detection"
+
+# Minor bump (new features or upstream dependency bump)
+git commit -m "feat(job): add new logging property
+
+minor"
+
+# Or for upstream ufw bumps:
+git commit -m "chore(deps): bump ufw to 0.36.2
+
+Renovate bumped vendored ufw to 0.36.2 for jammy stemcell compatibility.
+
+minor"
+
+# Major bump (breaking changes)
+git commit -m "feat!: change rule schema (breaking)
+
+BREAKING CHANGE: rule schema now requires explicit protocol field.
+
+major"
+```
+
+Upstream ufw has no GitHub repo: the Debian *orig* tarball is taken from the
+Ubuntu source archive (content-identical to the upstream release, stable URL,
+sha256-pinned). Bumps are manual — roughly one per stemcell OS generation.
 
 ## Update flow
 
 1. Bump url + sha256 in `vendir.yml` (manual PR, see comment in that file).
 2. The `create-final-bosh-release` workflow runs `vendor.sh` (vendir sync) +
    `addblob.sh` (bosh add-blob/upload-blobs), commits `config/blobs.yml` +
-   `vendir.lock`, then creates the final bosh release tagged with the upstream
+   `vendir.lock`, then creates the final bosh release with an auto-bumped semver
    version and attaches the release tarball to the GitHub release.
 
 Locally:

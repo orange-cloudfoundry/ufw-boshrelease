@@ -82,22 +82,23 @@ jobs:
             echo "Nothing to commit"
           fi
 
-      - name: Extract ufw version from vendir url
-        id: extract_version
-        run: |
-          set -e -o pipefail
-          url=$(yq '.directories[0].contents[0].http.url' vendir.yml)
-          version=$(echo "${url}" | sed -E 's#.*/ufw_([^_]+)\.orig\.tar\.gz#\1#')
-          echo "version=${version}" >> "${GITHUB_OUTPUT}"
-          echo "extracted upstream version: ${version}"
+      - name: Bump version
+        id: bump-version
+        uses: ietf-tools/semver-action@c90370b2958652d71c06a3484129a4d423a6d8a8 # v1.11.0
+        with:
+          token: ${{ github.token }}
+          branch: main
+          noVersionBumpBehavior: patch  # default to patch bumps on every push
+          majorList: major              # commit message contains 'major' triggers major bump
+          minorList: minor, feat        # commit message contains 'minor' or 'feat' triggers minor bump
 
       - name: create bosh final release
         id: create-bosh-release
         uses: orange-cloudfoundry/create-bosh-release-action@1e04544761a0f457bf3c2116a1701926b30e622d # v1.2.5
         with:
           target_branch: ${{github.ref_name}}
-          tag_name: ${{ steps.extract_version.outputs.version }}
-          override_existing: true # allow deletion of existing tags
+          tag_name: ${{ steps.bump-version.outputs.next }}
+          override_existing: false # no longer need to override (independent versions don't conflict)
           force_version_consistency: true # to force tag_name without 'v' prefix
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -112,7 +113,7 @@ jobs:
         with:
           tag: ${{ steps.create-bosh-release.outputs.version }}
           draft: false
-          allowUpdates: true
+          allowUpdates: false # no longer need updates (independent versions)
           omitDraftDuringUpdate: true
           generateReleaseNotes: true
           artifacts: ./${{ steps.create-bosh-release.outputs.file }}
